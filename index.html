@@ -47,8 +47,9 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 .flex button{flex:1}
 .ok{background:#d4edda}
 .fail{background:#f8d7da}
-.preview-wrap{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
-.preview-wrap img{width:110px;height:85px;object-fit:cover;border:1px solid #ddd;border-radius:6px;background:#fff;padding:2px}
+.preview-wrap{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.anh-row{display:flex;align-items:center;gap:8px}
+.anh-row img{width:120px;height:90px;object-fit:cover;border:1px solid #ddd;border-radius:6px;background:#fff;padding:2px}
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -100,7 +101,6 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <input id="anhInput" type="file" accept="image/*" capture="environment" multiple onchange="taiAnhLen(event,'camera')" style="display:none">
 <input id="thuVienInput" type="file" accept="image/*" multiple onchange="taiAnhLen(event,'gallery')" style="display:none">
 <div id="anhPreviewWrap" class="preview-wrap"></div>
-<button class="btn-main" onclick="pdfTinh()">Xuất PDF bảng tính</button>
 <button class="btn-main" onclick="xuatAnh()">Xuất ảnh</button>
 </div>
 
@@ -139,7 +139,6 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 
 <button class="btn-main" onclick="xuatExcel()">Xuất Excel</button>
 <button class="btn-main" onclick="xuatExcelKemHinh()">Xuất Excel kèm hình</button>
-<button class="btn-main" onclick="pdfBang()">Xuất PDF bảng KQ</button>
 
 </div>
 
@@ -290,7 +289,17 @@ renderAnhTam();
 function renderAnhTam(){
 let wrap=document.getElementById('anhPreviewWrap');
 if(!danhSachAnhTam.length){wrap.innerHTML='';return;}
-wrap.innerHTML=danhSachAnhTam.map((h,idx)=>`<img src="${h}" alt="Ảnh ${idx+1}">`).join('');
+wrap.innerHTML=danhSachAnhTam.map((h,idx)=>`
+  <div class="anh-row">
+    <img src="${h}" alt="Ảnh ${idx+1}">
+    <button class="btn-danger" style="margin-top:0" onclick="xoaAnhTheoIndex(${idx})">Xóa</button>
+  </div>
+`).join('');
+}
+
+function xoaAnhTheoIndex(i){
+danhSachAnhTam.splice(i,1);
+renderAnhTam();
 }
 
 function nenAnh(file,maxW=1280,quality=0.75){
@@ -474,13 +483,6 @@ return String(v)
   .replace(/'/g,'&#39;');
 }
 
-function pdfTinh(){
-let html=document.getElementById('thongtin').outerHTML+document.getElementById('bangtinh').outerHTML;
-let w=window.open('');
-w.document.write('<html><body>'+html+'</body></html>');
-w.print();
-}
-
 function xuatAnh(){
 
 let thongtin = document.getElementById('thongtin');
@@ -507,13 +509,6 @@ html2canvas(div, {scale:2}).then(canvas => {
     document.body.removeChild(div); // dọn rác
 });
 
-}
-
-function pdfBang(){
-let html=document.getElementById('thongtin').outerHTML+document.getElementById('bangKQ').outerHTML;
-let w=window.open('');
-w.document.write('<html><body>'+html+'</body></html>');
-w.print();
 }
 
 hienthi();
