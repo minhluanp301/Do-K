@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biên bản thí nghiệm độ chặt K</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+body{font-family:Arial;background:#eef2f7;margin:0}
+.wrap{max-width:1100px;margin:auto;padding:10px}
+.card{background:#fff;padding:12px;border-radius:10px;margin-bottom:10px}
+
+input{
+  width:100%;
+  padding:4px 6px;
+  font-size:13px;
+  box-sizing:border-box;
+  height:28px;
+
+  line-height:20px;        /* 👈 quan trọng */
+  display:block;           /* 👈 fix lệch */
+  vertical-align:middle;
+
+  border:1px solid #ccc;
+}
+
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+#bangKQ{min-width:700px}
+th,td{
+  border:1px solid #ccc;
+  padding:6px;
+  text-align:center;
+  vertical-align:middle;  /* 👈 fix lệch chữ */
+}
+th{background:#f1f1f1}
+td{vertical-align:middle}
+button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;margin-top:8px}
+.btn-main{background:#007bff}
+.btn-danger{background:#dc3545}
+.btn-gray{background:#6c757d}
+.title{text-align:center;font-weight:bold;font-size:18px;margin-bottom:10px}
+.flex{display:flex;gap:8px;flex-wrap:wrap}
+.flex button{flex:1}
+.ok{background:#d4edda}
+.fail{background:#f8d7da}
+</style>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<body>
+<div class="wrap">
+
+<div class="card" id="thongtin">
+<div class="title">BIÊN BẢN THÍ NGHIỆM ĐỘ CHẶT NỀN ĐƯỜNG (DAO VÒNG)</div>
+<table>
+<tr><td>Tên công trình</td><td><input id="congtrinh"></td></tr>
+<tr><td>Đơn vị thi công</td><td><input id="donvi"></td></tr>
+<tr><td>TVGS</td><td><input id="tvgs"></td></tr>
+<tr><td>Ngày đo</td><td><input id="ngay" readonly></td></tr>
+<tr><td>Tên đường</td><td><input id="ten"></td></tr>
+<tr><td>Vị trí</td><td><input id="vitri"></td></tr>
+<tr><td>γ max (g/cm³)</td><td><input id="gammaMax" type="number"></td></tr>
+<tr><td>K yêu cầu (%)</td><td><input id="kYC" type="number"></td></tr>
+</table>
+</div>
+
+<div class="card" id="bangtinh">
+<h3>Bảng tính</h3>
+<table>
+<tr><th>STT</th><th>Tên chỉ tiêu</th><th>Đơn vị</th><th>Tính toán</th></tr>
+<tr><td>1</td><td>KL vật liệu ẩm + dao</td><td>g</td><td><input id="m1" type="number"></td></tr>
+<tr><td>2</td><td>KL dao</td><td>g</td><td><input id="m2" type="number"></td></tr>
+<tr><td>3</td><td>Thể tích dao</td><td>cm³</td><td><input id="m3" type="number"></td></tr>
+<tr><td>4</td><td>Khối lượng thể tích ướt</td><td>g/cm³</td><td id="m4"></td></tr>
+<tr><td>5</td><td>KL vật liệu ẩm</td><td>g</td><td><input id="m5" type="number"></td></tr>
+<tr><td>6</td><td>KL vật liệu khô</td><td>g</td><td><input id="m6" type="number"></td></tr>
+<tr><td>7</td><td>Khối lượng nước</td><td>g</td><td id="m7"></td></tr>
+<tr><td>8</td><td>Độ ẩm</td><td>%</td><td id="m8"></td></tr>
+<tr><td>9</td><td>Khối lượng thể tích khô</td><td>g/cm³</td><td id="m9"></td></tr>
+<tr><td>10</td><td>Độ chặt K</td><td>%</td><td id="kq"></td></tr>
+<tr><td>11</td><td>Đánh giá</td><td></td><td id="dg"></td></tr>
+</table>
+
+<div class="flex">
+<button class="btn-main" onclick="tinh()">Tính & Lưu</button>
+<button class="btn-gray" onclick="doMoi()">Đo mới</button>
+</div>
+<button class="btn-main" onclick="pdfTinh()">Xuất PDF bảng tính</button>
+<button class="btn-main" onclick="xuatAnh()">Xuất ảnh</button>
+</div>
+
+<div class="card">
+<h3>Bảng lưu kết quả</h3>
+
+<!-- THÊM 3 DÒNG -->
+<table style="margin-bottom:8px">
+<tr><td style="text-align:left">Tên công trình:</td><td id="ct_kq"></td></tr>
+<tr><td style="text-align:left">Đơn vị thi công:</td><td id="dv_kq"></td></tr>
+<tr><td style="text-align:left">TVGS:</td><td id="tvgs_kq"></td></tr>
+</table>
+
+<div class="table-wrap">
+<table id="bangKQ">
+<thead>
+<tr>
+<th>#</th>
+<th>Thời gian</th>
+<th>Đường</th>
+<th>Vị trí</th>
+<th>γmax</th> <!-- THÊM -->
+<th>KL ẩm + dao</th>
+<th>Độ ẩm (%)</th>
+<th>K (%)</th>
+<th>Đánh giá</th>
+<th>Xóa</th>
+</tr>
+</thead>
+<tbody id="ds"></tbody>
+</table>
+</div>
+
+<button class="btn-main" onclick="xuatExcel()">Xuất Excel</button>
+<button class="btn-main" onclick="pdfBang()">Xuất PDF bảng KQ</button>
+
+</div>
+
+</div>
+
+<script>
+
+function tinh(){
+let m1=+m1El().value;
+let m2=+m2El().value;
+let m3=+m3El().value;
+let m5=+m5El().value;
+let m6=+m6El().value;
+let gammaMax=+document.getElementById('gammaMax').value;
+let kYC=+document.getElementById('kYC').value;
+
+if(!m1||!m2||!m3||!m5||!m6||!gammaMax||!kYC){alert('Thiếu dữ liệu');return;}
+
+let m4=(m1-m2)/m3;
+let m7=m5-m6;
+let m8=m6?(m7/m6)*100:0;
+let m9=m4/(1+m8/100);
+let K=m9/gammaMax*100;
+let dg = K>=kYC?"Đạt":"Không đạt";
+
+set('m4',m4);
+set('m7',m7);
+set('m8',m8);
+set('m9',m9);
+set('kq',K,2);
+dgEl().innerText=dg;
+
+let time=new Date().toLocaleString();
+document.getElementById('ngay').value=time;
+
+let ten=tenEl().value;
+let vitri=vitriEl().value;
+
+luu({time,ten,vitri,gammaMax,m1,m8:m8.toFixed(2),K:K.toFixed(2),dg});
+}
+
+function set(id,val,fix=3){document.getElementById(id).innerText=val.toFixed(fix)}
+function m1El(){return document.getElementById('m1')}
+function m2El(){return document.getElementById('m2')}
+function m3El(){return document.getElementById('m3')}
+function m5El(){return document.getElementById('m5')}
+function m6El(){return document.getElementById('m6')}
+function tenEl(){return document.getElementById('ten')}
+function vitriEl(){return document.getElementById('vitri')}
+function dgEl(){return document.getElementById('dg')}
+
+function luu(d){
+let arr=JSON.parse(localStorage.getItem('k'))||[];
+arr.unshift(d);
+if(arr.length>39)arr=arr.slice(0,39);
+localStorage.setItem('k',JSON.stringify(arr));
+hienthi();
+}
+
+function xoa(i){
+let arr=JSON.parse(localStorage.getItem('k'))||[];
+arr.splice(i,1);
+localStorage.setItem('k',JSON.stringify(arr));
+hienthi();
+}
+
+function hienthi(){
+let arr=JSON.parse(localStorage.getItem('k'))||[];
+let html="";
+arr.forEach((d,i)=>{
+let cls = d.dg==="Đạt"?"ok":"fail";
+html+=`<tr class="${cls}">
+<td>${i+1}</td>
+<td>${d.time}</td>
+<td>${d.ten}</td>
+<td>${d.vitri}</td>
+<td>${d.gammaMax}</td>
+<td>${d.m1}</td>
+<td>${d.m8}</td>
+<td>${d.K}</td>
+<td>${d.dg}</td>
+<td><button class='btn-danger' onclick='xoa(${i})'>X</button></td>
+</tr>`
+});
+ds.innerHTML=html;
+
+// HIỂN THỊ THÔNG TIN
+ct_kq.innerText=congtrinh.value;
+dv_kq.innerText=donvi.value;
+tvgs_kq.innerText=tvgs.value;
+}
+
+function doMoi(){
+if(confirm('Xóa toàn bộ dữ liệu?')){
+localStorage.removeItem('k');
+document.querySelectorAll('input').forEach(i=>i.value='');
+document.querySelectorAll('#m4,#m7,#m8,#m9,#kq,#dg').forEach(e=>e.innerText='');
+hienthi();
+}
+}
+
+function xuatExcel(){
+let data=JSON.parse(localStorage.getItem('k'))||[];
+
+// lấy thông tin
+let congtrinh = document.getElementById('congtrinh').value;
+let donvi = document.getElementById('donvi').value;
+let tvgs = document.getElementById('tvgs').value;
+
+// tạo dữ liệu excel
+let ws_data = [
+["Tên công trình:", congtrinh],
+["Đơn vị thi công:", donvi],
+["TVGS:", tvgs],
+[], // dòng trống
+["STT","Thời gian","Đường","Vị trí","γmax","KL","Độ ẩm","K","Đánh giá"]
+];
+
+data.forEach((d,i)=>{
+ws_data.push([
+  i+1,
+  d.time,
+  d.ten,
+  d.vitri,
+  d.gammaMax,
+  d.m1,
+  d.m8,
+  d.K,
+  d.dg
+]);
+});
+
+let wb=XLSX.utils.book_new();
+let ws=XLSX.utils.aoa_to_sheet(ws_data);
+XLSX.utils.book_append_sheet(wb,ws,"KQ");
+
+// căn chỉnh độ rộng cột (đẹp hơn)
+ws['!cols'] = [
+  {wch:5},{wch:20},{wch:15},{wch:15},{wch:10},{wch:15},{wch:10},{wch:10},{wch:15}
+];
+
+XLSX.writeFile(wb,"ket_qua_K.xlsx");
+}
+
+function pdfTinh(){
+let html=document.getElementById('thongtin').outerHTML+document.getElementById('bangtinh').outerHTML;
+let w=window.open('');
+w.document.write('<html><body>'+html+'</body></html>');
+w.print();
+}
+
+function xuatAnh(){
+
+let thongtin = document.getElementById('thongtin');
+let bangtinh = document.getElementById('bangtinh');
+
+// tạo vùng tạm (bắt buộc phải add vào body)
+let div = document.createElement('div');
+div.style.background = "#fff";
+div.style.padding = "20px";
+div.style.position = "fixed";
+div.style.top = "-9999px";
+
+div.appendChild(thongtin.cloneNode(true));
+div.appendChild(bangtinh.cloneNode(true));
+
+document.body.appendChild(div); // 👈 QUAN TRỌNG
+
+html2canvas(div, {scale:2}).then(canvas => {
+    let link = document.createElement('a');
+    link.download = 'bang_tinh_K.png';
+    link.href = canvas.toDataURL();
+    link.click();
+
+    document.body.removeChild(div); // dọn rác
+});
+
+}
+
+function pdfBang(){
+let html=document.getElementById('thongtin').outerHTML+document.getElementById('bangKQ').outerHTML;
+let w=window.open('');
+w.document.write('<html><body>'+html+'</body></html>');
+w.print();
+}
+
+hienthi();
+</script>
+
+</body>
+</html>
