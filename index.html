@@ -46,6 +46,9 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 .flex button{flex:1}
 .ok{background:#d4edda}
 .fail{background:#f8d7da}
+</style>
+.ok{background:#d4edda}
+.fail{background:#f8d7da}
 .preview-wrap{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
 .preview-wrap img{width:120px;height:90px;object-fit:cover;border:1px solid #ddd;border-radius:8px;padding:2px;background:#fff}
 </style>
@@ -90,11 +93,20 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <button class="btn-main" onclick="tinh()">Tính & Lưu</button>
 <button class="btn-gray" onclick="doMoi()">Đo mới</button>
 </div>
+<button class="btn-main" onclick="pdfTinh()">Xuất PDF bảng tính</button>
+<button class="btn-main" onclick="xuatAnh()">Xuất ảnh</button>
+</div>
+<div class="flex">
+<button class="btn-main" onclick="tinh()">Tính & Lưu</button>
+<button class="btn-gray" onclick="doMoi()">Đo mới</button>
+</div>
 <div class="flex">
 <button class="btn-main" onclick="chonAnh()">Chụp hình</button>
+<button class="btn-main" onclick="chonThuVien()">Chọn từ thư viện</button>
 <button class="btn-gray" onclick="xoaAnhTam()">Xóa hình</button>
 </div>
 <input id="anhInput" type="file" accept="image/*" capture="environment" multiple onchange="taiAnhLen(event)" style="display:none">
+<input id="thuVienInput" type="file" accept="image/*" multiple onchange="taiAnhLen(event)" style="display:none">
 <div id="anhPreviewWrap" class="preview-wrap"></div>
 <button class="btn-main" onclick="pdfTinh()">Xuất PDF bảng tính</button>
 <button class="btn-main" onclick="xuatAnh()">Xuất ảnh</button>
@@ -123,6 +135,13 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <th>Độ ẩm (%)</th>
 <th>K (%)</th>
 <th>Đánh giá</th>
+<th>Xóa</th>
+</tr>
+</thead>
+<th>KL ẩm + dao</th>
+<th>Độ ẩm (%)</th>
+<th>K (%)</th>
+<th>Đánh giá</th>
 <th>Hình</th>
 <th>Xóa</th>
 </tr>
@@ -138,6 +157,9 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 
 </div>
 
+<script>
+
+function tinh(){
 <script>
 let danhSachAnhTam = [];
 
@@ -172,6 +194,8 @@ document.getElementById('ngay').value=time;
 let ten=tenEl().value;
 let vitri=vitriEl().value;
 
+luu({time,ten,vitri,gammaMax,m1,m8:m8.toFixed(2),K:K.toFixed(2),dg});
+}
 let daLuu = luu({time,ten,vitri,gammaMax,m1,m8:m8.toFixed(2),K:K.toFixed(2),dg,hinhList:[...danhSachAnhTam]});
 if(daLuu) xoaAnhTam();
 }
@@ -186,6 +210,13 @@ function tenEl(){return document.getElementById('ten')}
 function vitriEl(){return document.getElementById('vitri')}
 function dgEl(){return document.getElementById('dg')}
 
+function luu(d){
+let arr=JSON.parse(localStorage.getItem('k'))||[];
+arr.unshift(d);
+if(arr.length>39)arr=arr.slice(0,39);
+localStorage.setItem('k',JSON.stringify(arr));
+hienthi();
+}
 function luu(d){
 let arr=JSON.parse(localStorage.getItem('k'))||[];
 arr.unshift(d);
@@ -222,6 +253,25 @@ html+=`<tr class="${cls}">
 <td>${d.m8}</td>
 <td>${d.K}</td>
 <td>${d.dg}</td>
+<td><button class='btn-danger' onclick='xoa(${i})'>X</button></td>
+</tr>`
+});
+ds.innerHTML=html;
+function hienthi(){
+let arr=JSON.parse(localStorage.getItem('k'))||[];
+let html="";
+arr.forEach((d,i)=>{
+let cls = d.dg==="Đạt"?"ok":"fail";
+html+=`<tr class="${cls}">
+<td>${i+1}</td>
+<td>${d.time}</td>
+<td>${d.ten}</td>
+<td>${d.vitri}</td>
+<td>${d.gammaMax}</td>
+<td>${d.m1}</td>
+<td>${d.m8}</td>
+<td>${d.K}</td>
+<td>${d.dg}</td>
 <td>${renderCotHinh(d,i)}</td>
 <td><button class='btn-danger' onclick='xoa(${i})'>X</button></td>
 </tr>`
@@ -234,8 +284,25 @@ dv_kq.innerText=donvi.value;
 tvgs_kq.innerText=tvgs.value;
 }
 
+function doMoi(){
+if(confirm('Xóa toàn bộ dữ liệu?')){
+localStorage.removeItem('k');
+document.querySelectorAll('input').forEach(i=>i.value='');
+document.querySelectorAll('#m4,#m7,#m8,#m9,#kq,#dg').forEach(e=>e.innerText='');
+hienthi();
+}
+}
+
+function xuatExcel(){
+let data=JSON.parse(localStorage.getItem('k'))||[];
+}
+
 function chonAnh(){
 document.getElementById('anhInput').click();
+}
+
+function chonThuVien(){
+document.getElementById('thuVienInput').click();
 }
 
 async function taiAnhLen(event){
@@ -246,6 +313,7 @@ for(const file of files){
 if(!file.type.startsWith('image/')) continue;
 let dataUrl = await nenAnh(file);
 danhSachAnhTam.push(dataUrl);
+tuLuuAnhVaoMay(dataUrl,`hien_truong_${Date.now()}.jpg`);
 }
 
 event.target.value = '';
@@ -255,6 +323,7 @@ renderAnhTam();
 function xoaAnhTam(){
 danhSachAnhTam = [];
 document.getElementById('anhInput').value = '';
+document.getElementById('thuVienInput').value = '';
 renderAnhTam();
 }
 
@@ -319,6 +388,13 @@ return new Promise((resolve,reject)=>{
 });
 }
 
+function tuLuuAnhVaoMay(dataUrl,fileName){
+let link = document.createElement('a');
+link.href = dataUrl;
+link.download = fileName;
+link.click();
+}
+
 function doMoi(){
 if(confirm('Xóa toàn bộ dữ liệu?')){
 localStorage.removeItem('k');
@@ -371,6 +447,48 @@ ws['!cols'] = [
 
 XLSX.writeFile(wb,"ket_qua_K.xlsx");
 }
+let rows = data.map((d,i)=>{
+  let dsHinh = layDanhSachHinh(d);
+  let hinhHtml = dsHinh.map(src=>`<img src="${src}" width="120" style="margin:2px;border:1px solid #ccc">`).join('');
+  return `<tr>
+  <td>${i+1}</td>
+  <td>${d.time||''}</td>
+  <td>${d.ten||''}</td>
+  <td>${d.vitri||''}</td>
+  <td>${d.gammaMax||''}</td>
+  <td>${d.m1||''}</td>
+  <td>${d.m8||''}</td>
+  <td>${d.K||''}</td>
+  <td>${d.dg||''}</td>
+  <td>${hinhHtml||''}</td>
+  </tr>`;
+}).join('');
+
+let htmlExcel = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"></head>
+<body>
+<table border="1">
+<tr><td><b>Tên công trình:</b></td><td colspan="9">${congtrinh}</td></tr>
+<tr><td><b>Đơn vị thi công:</b></td><td colspan="9">${donvi}</td></tr>
+<tr><td><b>TVGS:</b></td><td colspan="9">${tvgs}</td></tr>
+<tr>
+<th>STT</th><th>Thời gian</th><th>Đường</th><th>Vị trí</th><th>γmax</th>
+<th>KL</th><th>Độ ẩm</th><th>K</th><th>Đánh giá</th><th>Hình ảnh</th>
+</tr>
+${rows}
+</table>
+</body></html>`;
+
+let blob = new Blob([htmlExcel],{type:'application/vnd.ms-excel'});
+let link = document.createElement('a');
+link.href = URL.createObjectURL(blob);
+link.download = 'ket_qua_K_kem_hinh.xls';
+link.click();
+URL.revokeObjectURL(link.href);
+}
 
 function pdfTinh(){
 let html=document.getElementById('thongtin').outerHTML+document.getElementById('bangtinh').outerHTML;
@@ -418,4 +536,5 @@ hienthi();
 </script>
 
 </body>
+</html>
 </html>
