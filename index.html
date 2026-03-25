@@ -6,6 +6,7 @@
 <title>Biên bản thí nghiệm độ chặt K</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
 <style>
 body{font-family:Arial;background:#eef2f7;margin:0}
@@ -386,80 +387,62 @@ ws['!cols'] = [
 XLSX.writeFile(wb,"ket_qua_K.xlsx");
 }
 
-function xuatExcelKemHinh(){
+async function xuatExcelKemHinh(){
 let data=JSON.parse(localStorage.getItem('k'))||[];
 let congtrinh = document.getElementById('congtrinh').value;
 let donvi = document.getElementById('donvi').value;
 let tvgs = document.getElementById('tvgs').value;
 
-let dsAnhMhtml=[];
-let rows=data.map((d,i)=>{
-  let dsHinh=layDanhSachHinh(d);
-  let hinhHtml=dsHinh.map((src,idx)=>{
-    let tenAnh=`image_${i+1}_${idx+1}.jpg`;
-    dsAnhMhtml.push({src,tenAnh});
-    return `<div style="margin:2px 0"><img src="${tenAnh}" width="120" style="border:1px solid #ccc"><div>Ảnh ${idx+1}</div></div>`;
-  }).join('');
-  return `<tr>
-    <td>${i+1}</td><td>${esc(d.time)}</td><td>${esc(d.ten)}</td><td>${esc(d.vitri)}</td>
-    <td>${esc(d.gammaMax)}</td><td>${esc(d.m1)}</td><td>${esc(d.m5)}</td><td>${esc(d.m6)}</td><td>${esc(d.m8)}</td><td>${esc(d.K)}</td>
-    <td>${esc(d.dg)}</td><td>${hinhHtml}</td>
-  </tr>`;
-}).join('');
+if(typeof ExcelJS === 'undefined'){
+  alert('Không tải được thư viện ExcelJS để xuất hình.');
+  return;
+}
 
-let html=`
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-xmlns:x="urn:schemas-microsoft-com:office:excel"
-xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8"></head><body>
-<table border="1">
-<tr><td><b>Tên công trình:</b></td><td colspan="11">${esc(congtrinh)}</td></tr>
-<tr><td><b>Đơn vị thi công:</b></td><td colspan="11">${esc(donvi)}</td></tr>
-<tr><td><b>TVGS:</b></td><td colspan="11">${esc(tvgs)}</td></tr>
-<tr><th>STT</th><th>Thời gian</th><th>Đường</th><th>Vị trí</th><th>γmax</th><th>KL ẩm + dao</th><th>KL vật liệu ẩm</th><th>KL vật liệu khô</th><th>Độ ẩm</th><th>K</th><th>Đánh giá</th><th>Hình ảnh</th></tr>
-${rows}
-</table>
-</body></html>`;
+let wb = new ExcelJS.Workbook();
+let ws = wb.addWorksheet('KQ');
 
-let mhtml = taoMhtmlExcel(html,dsAnhMhtml);
-let blob=new Blob([mhtml],{type:'application/vnd.ms-excel'});
+ws.addRow(['Tên công trình:', congtrinh]);
+ws.addRow(['Đơn vị thi công:', donvi]);
+ws.addRow(['TVGS:', tvgs]);
+ws.addRow([]);
+ws.addRow(['STT','Thời gian','Đường','Vị trí','γmax','KL ẩm + dao','KL vật liệu ẩm','KL vật liệu khô','Độ ẩm','K','Đánh giá','Hình ảnh']);
+ws.getRow(5).font = {bold:true};
+
+data.forEach((d,i)=>{
+  let rowIndex = 6+i;
+  ws.addRow([i+1,d.time||'',d.ten||'',d.vitri||'',d.gammaMax||'',d.m1||'',d.m5||'',d.m6||'',d.m8||'',d.K||'',d.dg||'']);
+  let dsHinh = layDanhSachHinh(d);
+  if(dsHinh.length){
+    let src = dsHinh[0];
+    let imageId = wb.addImage({base64:src,extension:layExtAnh(src)});
+    ws.addImage(imageId,{
+      tl:{col:11.1,row:rowIndex-0.9},
+      ext:{width:90,height:65}
+    });
+    ws.getRow(rowIndex).height = 52;
+  }
+});
+
+ws.columns = [
+  {width:6},{width:22},{width:14},{width:14},{width:10},
+  {width:14},{width:14},{width:14},{width:10},{width:10},{width:12},{width:16}
+];
+
+let buffer = await wb.xlsx.writeBuffer();
+let blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 let link=document.createElement('a');
 link.href=URL.createObjectURL(blob);
-link.download='ket_qua_K_kem_hinh.xls';
+link.download='ket_qua_K_kem_hinh.xlsx';
 link.click();
 setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
 
-function taoMhtmlExcel(html,dsAnh){
-let boundary="----=_NextPart_DoK_Export";
-let mhtml=
-`MIME-Version: 1.0
-Content-Type: multipart/related; boundary="${boundary}"; type="text/html"
-
---${boundary}
-Content-Type: text/html; charset="utf-8"
-Content-Location: file:///C:/DoK_export.htm
-
-${html}
-`;
-
-dsAnh.forEach((anh)=>{
-  let match = (anh.src||'').match(/^data:(.*?);base64,(.*)$/);
-  if(!match) return;
-  let mime = match[1] || 'image/jpeg';
-  let b64 = match[2] || '';
-  mhtml += `
---${boundary}
-Content-Location: ${anh.tenAnh}
-Content-Transfer-Encoding: base64
-Content-Type: ${mime}
-
-${b64}
-`;
-});
-
-mhtml += `--${boundary}--`;
-return mhtml;
+function layExtAnh(src){
+let m = (src||'').match(/^data:image\/(png|jpeg|jpg|gif|bmp|webp);base64,/i);
+if(!m) return 'jpeg';
+let ext = m[1].toLowerCase();
+if(ext==='jpg') return 'jpeg';
+return ext;
 }
 
 function esc(v){
