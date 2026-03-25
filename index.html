@@ -400,33 +400,38 @@ if(typeof ExcelJS === 'undefined'){
 
 let wb = new ExcelJS.Workbook();
 let ws = wb.addWorksheet('KQ');
+let maxSoAnh = Math.max(0,...data.map(d=>layDanhSachHinh(d).length));
 
 ws.addRow(['Tên công trình:', congtrinh]);
 ws.addRow(['Đơn vị thi công:', donvi]);
 ws.addRow(['TVGS:', tvgs]);
 ws.addRow([]);
-ws.addRow(['STT','Thời gian','Đường','Vị trí','γmax','KL ẩm + dao','KL vật liệu ẩm','KL vật liệu khô','Độ ẩm','K','Đánh giá','Hình ảnh']);
+let tieuDe = ['STT','Thời gian','Đường','Vị trí','γmax','KL ẩm + dao','KL vật liệu ẩm','KL vật liệu khô','Độ ẩm','K','Đánh giá'];
+for(let i=1;i<=maxSoAnh;i++) tieuDe.push(`Hình ${i}`);
+ws.addRow(tieuDe);
 ws.getRow(5).font = {bold:true};
 
 data.forEach((d,i)=>{
   let rowIndex = 6+i;
-  ws.addRow([i+1,d.time||'',d.ten||'',d.vitri||'',d.gammaMax||'',d.m1||'',d.m5||'',d.m6||'',d.m8||'',d.K||'',d.dg||'']);
+  let giaTri = [i+1,d.time||'',d.ten||'',d.vitri||'',d.gammaMax||'',d.m1||'',d.m5||'',d.m6||'',d.m8||'',d.K||'',d.dg||''];
+  for(let j=0;j<maxSoAnh;j++) giaTri.push('');
+  ws.addRow(giaTri);
   let dsHinh = layDanhSachHinh(d);
   if(dsHinh.length){
-    let src = dsHinh[0];
+    ws.getRow(rowIndex).height = 52;
+    dsHinh.forEach((src,idx)=>{
     let imageId = wb.addImage({base64:src,extension:layExtAnh(src)});
     ws.addImage(imageId,{
-      tl:{col:11.1,row:rowIndex-0.9},
+      tl:{col:11+idx+0.1,row:rowIndex-0.9},
       ext:{width:90,height:65}
     });
-    ws.getRow(rowIndex).height = 52;
+    });
   }
 });
 
-ws.columns = [
-  {width:6},{width:22},{width:14},{width:14},{width:10},
-  {width:14},{width:14},{width:14},{width:10},{width:10},{width:12},{width:16}
-];
+let cols = [{width:6},{width:22},{width:14},{width:14},{width:10},{width:14},{width:14},{width:14},{width:10},{width:10},{width:12}];
+for(let i=0;i<maxSoAnh;i++) cols.push({width:16});
+ws.columns = cols;
 
 let buffer = await wb.xlsx.writeBuffer();
 let blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
