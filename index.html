@@ -88,7 +88,8 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 </table>
 
 <div class="flex">
-<button class="btn-main" onclick="tinh()">Tính & Lưu</button>
+<button class="btn-main" onclick="tinh()">Tính</button>
+<button class="btn-main" onclick="luuKetQua()">Lưu kết quả</button>
 <button class="btn-gray" onclick="doMoi()">Đo mới</button>
 </div>
 <div class="flex">
@@ -171,6 +172,19 @@ set('m8',m8);
 set('m9',m9);
 set('kq',K,2);
 dgEl().innerText=dg;
+}
+
+function luuKetQua(){
+let m1=+m1El().value;
+let m5=+m5El().value;
+let m6=+m6El().value;
+let gammaMax=+document.getElementById('gammaMax').value;
+let kqText=document.getElementById('kq').innerText;
+let m8Text=document.getElementById('m8').innerText;
+let dgText=dgEl().innerText;
+
+if(!m1||!m5||!m6||!gammaMax){alert('Thiếu dữ liệu đầu vào');return;}
+if(!kqText||!m8Text||!dgText){alert('Vui lòng bấm Tính trước khi lưu');return;}
 
 let time=new Date().toLocaleString();
 document.getElementById('ngay').value=time;
@@ -178,7 +192,7 @@ document.getElementById('ngay').value=time;
 let ten=tenEl().value;
 let vitri=vitriEl().value;
 
-let ok = luu({time,ten,vitri,gammaMax,m1,m5,m6,m8:m8.toFixed(2),K:K.toFixed(2),dg,hinhList:[...danhSachAnhTam]});
+let ok = luu({time,ten,vitri,gammaMax,m1,m5,m6,m8:m8Text,K:kqText,dg:dgText,hinhList:[...danhSachAnhTam]});
 if(ok) xoaAnhTam();
 }
 
