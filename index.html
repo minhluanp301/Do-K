@@ -46,6 +46,8 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 .flex button{flex:1}
 .ok{background:#d4edda}
 .fail{background:#f8d7da}
+.preview-wrap{margin-top:10px}
+.preview-wrap img{max-width:220px;border:1px solid #ddd;border-radius:8px;padding:4px;background:#fff}
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -88,6 +90,14 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <button class="btn-main" onclick="tinh()">Tính & Lưu</button>
 <button class="btn-gray" onclick="doMoi()">Đo mới</button>
 </div>
+<div class="flex">
+<button class="btn-main" onclick="chonAnh()">Chụp hình</button>
+<button class="btn-gray" onclick="xoaAnhTam()">Xóa hình</button>
+</div>
+<input id="anhInput" type="file" accept="image/*" capture="environment" onchange="taiAnhLen(event)" style="display:none">
+<div class="preview-wrap">
+<img id="anhPreview" alt="Ảnh hiện trường" style="display:none">
+</div>
 <button class="btn-main" onclick="pdfTinh()">Xuất PDF bảng tính</button>
 <button class="btn-main" onclick="xuatAnh()">Xuất ảnh</button>
 </div>
@@ -115,6 +125,7 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <th>Độ ẩm (%)</th>
 <th>K (%)</th>
 <th>Đánh giá</th>
+<th>Hình</th>
 <th>Xóa</th>
 </tr>
 </thead>
@@ -130,6 +141,7 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 </div>
 
 <script>
+let anhTam = "";
 
 function tinh(){
 let m1=+m1El().value;
@@ -162,7 +174,7 @@ document.getElementById('ngay').value=time;
 let ten=tenEl().value;
 let vitri=vitriEl().value;
 
-luu({time,ten,vitri,gammaMax,m1,m8:m8.toFixed(2),K:K.toFixed(2),dg});
+luu({time,ten,vitri,gammaMax,m1,m8:m8.toFixed(2),K:K.toFixed(2),dg,hinh:anhTam});
 }
 
 function set(id,val,fix=3){document.getElementById(id).innerText=val.toFixed(fix)}
@@ -205,6 +217,7 @@ html+=`<tr class="${cls}">
 <td>${d.m8}</td>
 <td>${d.K}</td>
 <td>${d.dg}</td>
+<td>${d.hinh?`<button class='btn-gray' onclick='taiHinh(${i})'>Lưu hình</button>`:''}</td>
 <td><button class='btn-danger' onclick='xoa(${i})'>X</button></td>
 </tr>`
 });
@@ -216,11 +229,49 @@ dv_kq.innerText=donvi.value;
 tvgs_kq.innerText=tvgs.value;
 }
 
+function chonAnh(){
+document.getElementById('anhInput').click();
+}
+
+function taiAnhLen(event){
+let file = event.target.files && event.target.files[0];
+if(!file)return;
+let reader = new FileReader();
+reader.onload = function(e){
+anhTam = e.target.result;
+let preview = document.getElementById('anhPreview');
+preview.src = anhTam;
+preview.style.display = 'block';
+};
+reader.readAsDataURL(file);
+}
+
+function xoaAnhTam(){
+anhTam = "";
+document.getElementById('anhInput').value = '';
+let preview = document.getElementById('anhPreview');
+preview.src = '';
+preview.style.display = 'none';
+}
+
+function taiHinh(i){
+let arr=JSON.parse(localStorage.getItem('k'))||[];
+if(!arr[i] || !arr[i].hinh){
+alert('Không có hình để lưu');
+return;
+}
+let link = document.createElement('a');
+link.href = arr[i].hinh;
+link.download = `hien_truong_${i+1}.png`;
+link.click();
+}
+
 function doMoi(){
 if(confirm('Xóa toàn bộ dữ liệu?')){
 localStorage.removeItem('k');
 document.querySelectorAll('input').forEach(i=>i.value='');
 document.querySelectorAll('#m4,#m7,#m8,#m9,#kq,#dg').forEach(e=>e.innerText='');
+xoaAnhTam();
 hienthi();
 }
 }
