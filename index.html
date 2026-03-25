@@ -122,6 +122,8 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <th>Vị trí</th>
 <th>γmax</th> <!-- THÊM -->
 <th>KL ẩm + dao</th>
+<th>KL vật liệu ẩm</th>
+<th>KL vật liệu khô</th>
 <th>Độ ẩm (%)</th>
 <th>K (%)</th>
 <th>Đánh giá</th>
@@ -175,7 +177,7 @@ document.getElementById('ngay').value=time;
 let ten=tenEl().value;
 let vitri=vitriEl().value;
 
-let ok = luu({time,ten,vitri,gammaMax,m1,m8:m8.toFixed(2),K:K.toFixed(2),dg,hinhList:[...danhSachAnhTam]});
+let ok = luu({time,ten,vitri,gammaMax,m1,m5,m6,m8:m8.toFixed(2),K:K.toFixed(2),dg,hinhList:[...danhSachAnhTam]});
 if(ok) xoaAnhTam();
 }
 
@@ -222,6 +224,8 @@ html+=`<tr class="${cls}">
 <td>${d.vitri}</td>
 <td>${d.gammaMax}</td>
 <td>${d.m1}</td>
+<td>${d.m5??''}</td>
+<td>${d.m6??''}</td>
 <td>${d.m8}</td>
 <td>${d.K}</td>
 <td>${d.dg}</td>
@@ -351,7 +355,7 @@ let ws_data = [
 ["Đơn vị thi công:", donvi],
 ["TVGS:", tvgs],
 [], // dòng trống
-["STT","Thời gian","Đường","Vị trí","γmax","KL","Độ ẩm","K","Đánh giá"]
+["STT","Thời gian","Đường","Vị trí","γmax","KL ẩm + dao","KL vật liệu ẩm","KL vật liệu khô","Độ ẩm","K","Đánh giá"]
 ];
 
 data.forEach((d,i)=>{
@@ -362,6 +366,8 @@ ws_data.push([
   d.vitri,
   d.gammaMax,
   d.m1,
+  d.m5||'',
+  d.m6||'',
   d.m8,
   d.K,
   d.dg
@@ -374,7 +380,7 @@ XLSX.utils.book_append_sheet(wb,ws,"KQ");
 
 // căn chỉnh độ rộng cột (đẹp hơn)
 ws['!cols'] = [
-  {wch:5},{wch:20},{wch:15},{wch:15},{wch:10},{wch:15},{wch:10},{wch:10},{wch:15}
+  {wch:5},{wch:20},{wch:15},{wch:15},{wch:10},{wch:15},{wch:15},{wch:15},{wch:10},{wch:10},{wch:15}
 ];
 
 XLSX.writeFile(wb,"ket_qua_K.xlsx");
@@ -388,11 +394,11 @@ let tvgs = document.getElementById('tvgs').value;
 
 let rows=data.map((d,i)=>{
   let dsHinh=layDanhSachHinh(d);
-  let hinhHtml=dsHinh.map(src=>`<img src="${src}" width="120" style="margin:2px;border:1px solid #ccc">`).join('');
+  let hinhHtml=dsHinh.map((src,idx)=>`<div style="margin:2px 0"><img src="${src}" width="120" style="border:1px solid #ccc"><div>Ảnh ${idx+1}</div></div>`).join('');
   return `<tr>
-    <td>${i+1}</td><td>${d.time||''}</td><td>${d.ten||''}</td><td>${d.vitri||''}</td>
-    <td>${d.gammaMax||''}</td><td>${d.m1||''}</td><td>${d.m8||''}</td><td>${d.K||''}</td>
-    <td>${d.dg||''}</td><td>${hinhHtml}</td>
+    <td>${i+1}</td><td>${esc(d.time)}</td><td>${esc(d.ten)}</td><td>${esc(d.vitri)}</td>
+    <td>${esc(d.gammaMax)}</td><td>${esc(d.m1)}</td><td>${esc(d.m5)}</td><td>${esc(d.m6)}</td><td>${esc(d.m8)}</td><td>${esc(d.K)}</td>
+    <td>${esc(d.dg)}</td><td>${hinhHtml}</td>
   </tr>`;
 }).join('');
 
@@ -402,10 +408,10 @@ xmlns:x="urn:schemas-microsoft-com:office:excel"
 xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="UTF-8"></head><body>
 <table border="1">
-<tr><td><b>Tên công trình:</b></td><td colspan="9">${congtrinh}</td></tr>
-<tr><td><b>Đơn vị thi công:</b></td><td colspan="9">${donvi}</td></tr>
-<tr><td><b>TVGS:</b></td><td colspan="9">${tvgs}</td></tr>
-<tr><th>STT</th><th>Thời gian</th><th>Đường</th><th>Vị trí</th><th>γmax</th><th>KL</th><th>Độ ẩm</th><th>K</th><th>Đánh giá</th><th>Hình ảnh</th></tr>
+<tr><td><b>Tên công trình:</b></td><td colspan="11">${esc(congtrinh)}</td></tr>
+<tr><td><b>Đơn vị thi công:</b></td><td colspan="11">${esc(donvi)}</td></tr>
+<tr><td><b>TVGS:</b></td><td colspan="11">${esc(tvgs)}</td></tr>
+<tr><th>STT</th><th>Thời gian</th><th>Đường</th><th>Vị trí</th><th>γmax</th><th>KL ẩm + dao</th><th>KL vật liệu ẩm</th><th>KL vật liệu khô</th><th>Độ ẩm</th><th>K</th><th>Đánh giá</th><th>Hình ảnh</th></tr>
 ${rows}
 </table>
 </body></html>`;
@@ -416,6 +422,16 @@ link.href=URL.createObjectURL(blob);
 link.download='ket_qua_K_kem_hinh.xls';
 link.click();
 setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+
+function esc(v){
+if(v===undefined || v===null) return '';
+return String(v)
+  .replace(/&/g,'&amp;')
+  .replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;')
+  .replace(/'/g,'&#39;');
 }
 
 function pdfTinh(){
