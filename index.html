@@ -392,9 +392,14 @@ let congtrinh = document.getElementById('congtrinh').value;
 let donvi = document.getElementById('donvi').value;
 let tvgs = document.getElementById('tvgs').value;
 
+let dsAnhMhtml=[];
 let rows=data.map((d,i)=>{
   let dsHinh=layDanhSachHinh(d);
-  let hinhHtml=dsHinh.map((src,idx)=>`<div style="margin:2px 0"><img src="${src}" width="120" style="border:1px solid #ccc"><div>Ảnh ${idx+1}</div></div>`).join('');
+  let hinhHtml=dsHinh.map((src,idx)=>{
+    let tenAnh=`image_${i+1}_${idx+1}.jpg`;
+    dsAnhMhtml.push({src,tenAnh});
+    return `<div style="margin:2px 0"><img src="${tenAnh}" width="120" style="border:1px solid #ccc"><div>Ảnh ${idx+1}</div></div>`;
+  }).join('');
   return `<tr>
     <td>${i+1}</td><td>${esc(d.time)}</td><td>${esc(d.ten)}</td><td>${esc(d.vitri)}</td>
     <td>${esc(d.gammaMax)}</td><td>${esc(d.m1)}</td><td>${esc(d.m5)}</td><td>${esc(d.m6)}</td><td>${esc(d.m8)}</td><td>${esc(d.K)}</td>
@@ -416,12 +421,45 @@ ${rows}
 </table>
 </body></html>`;
 
-let blob=new Blob([html],{type:'application/vnd.ms-excel'});
+let mhtml = taoMhtmlExcel(html,dsAnhMhtml);
+let blob=new Blob([mhtml],{type:'application/vnd.ms-excel'});
 let link=document.createElement('a');
 link.href=URL.createObjectURL(blob);
 link.download='ket_qua_K_kem_hinh.xls';
 link.click();
 setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+
+function taoMhtmlExcel(html,dsAnh){
+let boundary="----=_NextPart_DoK_Export";
+let mhtml=
+`MIME-Version: 1.0
+Content-Type: multipart/related; boundary="${boundary}"; type="text/html"
+
+--${boundary}
+Content-Type: text/html; charset="utf-8"
+Content-Location: file:///C:/DoK_export.htm
+
+${html}
+`;
+
+dsAnh.forEach((anh)=>{
+  let match = (anh.src||'').match(/^data:(.*?);base64,(.*)$/);
+  if(!match) return;
+  let mime = match[1] || 'image/jpeg';
+  let b64 = match[2] || '';
+  mhtml += `
+--${boundary}
+Content-Location: ${anh.tenAnh}
+Content-Transfer-Encoding: base64
+Content-Type: ${mime}
+
+${b64}
+`;
+});
+
+mhtml += `--${boundary}--`;
+return mhtml;
 }
 
 function esc(v){
