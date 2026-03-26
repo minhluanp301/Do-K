@@ -360,9 +360,11 @@ dsHinh.forEach((h,idx)=>{
 
 function doMoi(){
 if(confirm('Tạo phép đo mới?')){
+localStorage.removeItem('k');
 ['m1','m2','m3','m5','m6'].forEach(id=>document.getElementById(id).value='');
 document.querySelectorAll('#m4,#m7,#m8,#m9,#kq,#dg').forEach(e=>e.innerText='');
 xoaAnhTam();
+hienthi();
 }
 }
 
@@ -409,7 +411,7 @@ ws['!cols'] = [
 ];
 
 let tenFile = taoTenCongTrinhFile(congtrinh);
-let ngay = taoNgayFile(new Date());
+let ngay = taoNgayGioFile(new Date());
 XLSX.writeFile(wb,`${ngay}_${tenFile||'KetQuaK'}.xlsx`);
 }
 
@@ -464,7 +466,7 @@ let blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.
 let link=document.createElement('a');
 link.href=URL.createObjectURL(blob);
 let tenFile = taoTenCongTrinhFile(congtrinh);
-let ngay = taoNgayFile(new Date());
+let ngay = taoNgayGioFile(new Date());
 link.download=`${ngay}_${tenFile||'KetQuaK'}.xlsx`;
 link.click();
 setTimeout(()=>URL.revokeObjectURL(link.href),1000);
@@ -529,6 +531,14 @@ let y = dateObj.getFullYear();
 let m = String(dateObj.getMonth()+1).padStart(2,'0');
 let d = String(dateObj.getDate()).padStart(2,'0');
 return `${y}.${m}.${d}`;
+}
+
+function taoNgayGioFile(dateObj){
+let ymd = taoNgayFile(dateObj);
+let hh = String(dateObj.getHours()).padStart(2,'0');
+let mm = String(dateObj.getMinutes()).padStart(2,'0');
+let ss = String(dateObj.getSeconds()).padStart(2,'0');
+return `${ymd}.${hh}${mm}${ss}`;
 }
 
 function boDauTiengViet(str){
