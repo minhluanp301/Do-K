@@ -149,6 +149,43 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 
 <script>
 let danhSachAnhTam = [];
+const IMAGE_DB_NAME = 'DoK_Image_DB';
+const IMAGE_STORE = 'images';
+
+function moImageDB(){
+return new Promise((resolve,reject)=>{
+  const req = indexedDB.open(IMAGE_DB_NAME,1);
+  req.onupgradeneeded = function(e){
+    const db = e.target.result;
+    if(!db.objectStoreNames.contains(IMAGE_STORE)){
+      db.createObjectStore(IMAGE_STORE,{keyPath:'id'});
+    }
+  };
+  req.onsuccess = ()=>resolve(req.result);
+  req.onerror = ()=>reject(req.error);
+});
+}
+
+async function luuAnhVaoDB(dataUrl){
+let db = await moImageDB();
+let id = `img_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+return new Promise((resolve,reject)=>{
+  let tx = db.transaction(IMAGE_STORE,'readwrite');
+  tx.objectStore(IMAGE_STORE).put({id,dataUrl,createdAt:Date.now()});
+  tx.oncomplete = ()=>resolve(id);
+  tx.onerror = ()=>reject(tx.error);
+});
+}
+
+async function layAnhTuDB(id){
+let db = await moImageDB();
+return new Promise((resolve,reject)=>{
+  let tx = db.transaction(IMAGE_STORE,'readonly');
+  let req = tx.objectStore(IMAGE_STORE).get(id);
+  req.onsuccess = ()=>resolve(req.result ? req.result.dataUrl : null);
+  req.onerror = ()=>reject(req.error);
+});
+}
 
 function tinh(){
 let m1=+m1El().value;
@@ -176,7 +213,7 @@ set('kq',K,2);
 dgEl().innerText=dg;
 }
 
-function luuKetQua(){
+async function luuKetQua(){
 let m1=+m1El().value;
 let m5=+m5El().value;
 let m6=+m6El().value;
@@ -194,7 +231,13 @@ document.getElementById('ngay').value=time;
 let ten=tenEl().value;
 let vitri=vitriEl().value;
 
-let ok = luu({time,ten,vitri,gammaMax,m1,m5,m6,m8:m8Text,K:kqText,dg:dgText,hinhList:[...danhSachAnhTam]});
+let hinhIds = [];
+for(const img of danhSachAnhTam){
+  let id = await luuAnhVaoDB(img);
+  hinhIds.push(id);
+}
+
+let ok = luu({time,ten,vitri,gammaMax,m1,m5,m6,m8:m8Text,K:kqText,dg:dgText,hinhIds,hinhCount:hinhIds.length});
 if(ok) xoaAnhTam();
 }
 
@@ -333,22 +376,15 @@ link.download=fileName;
 link.click();
 }
 
-function layDanhSachHinh(d){
-if(!d) return [];
-if(Array.isArray(d.hinhList)) return d.hinhList;
-if(d.hinh) return [d.hinh];
-return [];
-}
-
 function renderCotHinh(d,i){
-let dsHinh=layDanhSachHinh(d);
-if(!dsHinh.length) return '';
-return `<button class='btn-gray' onclick='taiHinh(${i})'>${dsHinh.length} hình</button>`;
+let soHinh = d.hinhCount ?? (Array.isArray(d.hinhIds)?d.hinhIds.length:layDanhSachHinhCu(d).length);
+if(!soHinh) return '';
+return `<button class='btn-gray' onclick='taiHinh(${i})'>${soHinh} hình</button>`;
 }
 
-function taiHinh(i){
+async function taiHinh(i){
 let arr=JSON.parse(localStorage.getItem('k'))||[];
-let dsHinh=layDanhSachHinh(arr[i]);
+let dsHinh=await layDanhSachHinh(arr[i]);
 if(!dsHinh.length){alert('Không có hình');return;}
 dsHinh.forEach((h,idx)=>{
   let link=document.createElement('a');
@@ -428,7 +464,8 @@ if(typeof ExcelJS === 'undefined'){
 
 let wb = new ExcelJS.Workbook();
 let ws = wb.addWorksheet('KQ');
-let maxSoAnh = Math.max(0,...data.map(d=>layDanhSachHinh(d).length));
+let dsHinhTatCa = await Promise.all(data.map(d=>layDanhSachHinh(d)));
+let maxSoAnh = Math.max(0,...dsHinhTatCa.map(ds=>ds.length));
 
 ws.addRow(['Tên công trình:', congtrinh]);
 ws.addRow(['Đơn vị thi công:', donvi]);
@@ -444,7 +481,7 @@ data.forEach((d,i)=>{
   let giaTri = [i+1,d.time||'',d.ten||'',d.vitri||'',d.gammaMax||'',d.m1||'',d.m5||'',d.m6||'',d.m8||'',d.K||'',d.dg||''];
   for(let j=0;j<maxSoAnh;j++) giaTri.push('');
   ws.addRow(giaTri);
-  let dsHinh = layDanhSachHinh(d);
+  let dsHinh = dsHinhTatCa[i] || [];
   if(dsHinh.length){
     ws.getRow(rowIndex).height = 52;
     dsHinh.forEach((src,idx)=>{
@@ -478,6 +515,22 @@ if(!m) return 'jpeg';
 let ext = m[1].toLowerCase();
 if(ext==='jpg') return 'jpeg';
 return ext;
+}
+
+function layDanhSachHinhCu(d){
+if(!d) return [];
+if(Array.isArray(d.hinhList)) return d.hinhList;
+if(d.hinh) return [d.hinh];
+return [];
+}
+
+async function layDanhSachHinh(d){
+if(!d) return [];
+if(Array.isArray(d.hinhIds) && d.hinhIds.length){
+  let rs = await Promise.all(d.hinhIds.map(id=>layAnhTuDB(id)));
+  return rs.filter(Boolean);
+}
+return layDanhSachHinhCu(d);
 }
 
 function layThongTinCongTrinh(){
