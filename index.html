@@ -476,26 +476,35 @@ for(let i=1;i<=maxSoAnh;i++) tieuDe.push(`Hình ${i}`);
 ws.addRow(tieuDe);
 ws.getRow(5).font = {bold:true};
 
-data.forEach((d,i)=>{
+for(let i=0;i<data.length;i++){
+  let d = data[i];
   let rowIndex = 6+i;
   let giaTri = [i+1,d.time||'',d.ten||'',d.vitri||'',d.gammaMax||'',d.m1||'',d.m5||'',d.m6||'',d.m8||'',d.K||'',d.dg||''];
   for(let j=0;j<maxSoAnh;j++) giaTri.push('');
   ws.addRow(giaTri);
   let dsHinh = dsHinhTatCa[i] || [];
   if(dsHinh.length){
-    ws.getRow(rowIndex).height = 52;
-    dsHinh.forEach((src,idx)=>{
-    let imageId = wb.addImage({base64:src,extension:layExtAnh(src)});
-    ws.addImage(imageId,{
-      tl:{col:11+idx+0.1,row:rowIndex-0.9},
-      ext:{width:90,height:65}
-    });
-    });
+    let maxRowPx = 0;
+    for(let idx=0; idx<dsHinh.length; idx++){
+      let src = dsHinh[idx];
+      let imageId = wb.addImage({base64:src,extension:layExtAnh(src)});
+      let size = await layKichThuocAnh(src);
+      let maxW = 220, maxH = 180;
+      let scale = Math.min(1, maxW/size.width, maxH/size.height);
+      let w = Math.max(60,Math.round(size.width*scale));
+      let h = Math.max(45,Math.round(size.height*scale));
+      ws.addImage(imageId,{
+        tl:{col:11+idx+0.1,row:rowIndex-0.95},
+        ext:{width:w,height:h}
+      });
+      if(h>maxRowPx) maxRowPx = h;
+    }
+    ws.getRow(rowIndex).height = Math.max(60,Math.round(maxRowPx*0.78));
   }
-});
+}
 
 let cols = [{width:6},{width:22},{width:14},{width:14},{width:10},{width:14},{width:14},{width:14},{width:10},{width:10},{width:12}];
-for(let i=0;i<maxSoAnh;i++) cols.push({width:16});
+for(let i=0;i<maxSoAnh;i++) cols.push({width:30});
 ws.columns = cols;
 
 let buffer = await wb.xlsx.writeBuffer();
@@ -515,6 +524,15 @@ if(!m) return 'jpeg';
 let ext = m[1].toLowerCase();
 if(ext==='jpg') return 'jpeg';
 return ext;
+}
+
+function layKichThuocAnh(src){
+return new Promise((resolve)=>{
+  let img = new Image();
+  img.onload = ()=>resolve({width:img.naturalWidth||120,height:img.naturalHeight||90});
+  img.onerror = ()=>resolve({width:120,height:90});
+  img.src = src;
+});
 }
 
 function layDanhSachHinhCu(d){
