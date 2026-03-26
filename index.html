@@ -58,7 +58,7 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <div class="wrap">
 
 <div class="card" id="thongtin">
-<div class="title">BIÊN BẢN THÍ NGHIỆM ĐỘ CHẶT NỀN ĐƯỜNG (DAO VÒNG)</div>
+<div class="title">NHẬT KÝ ĐO K</div>
 <table>
 <tr><td>Tên công trình</td><td><input id="congtrinh"></td></tr>
 <tr><td>Đơn vị thi công</td><td><input id="donvi"></td></tr>
@@ -69,6 +69,10 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <tr><td>γ max (g/cm³)</td><td><input id="gammaMax" type="number"></td></tr>
 <tr><td>K yêu cầu (%)</td><td><input id="kYC" type="number"></td></tr>
 </table>
+<div class="flex">
+<button class="btn-main" onclick="layThongTinCongTrinh()">Lấy thông tin công trình</button>
+<button class="btn-gray" onclick="xuatThongTinCongTrinhTxt()">Xuất thông tin .txt</button>
+</div>
 </div>
 
 <div class="card" id="bangtinh">
@@ -91,7 +95,7 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <div class="flex">
 <button class="btn-main" onclick="tinh()">Tính</button>
 <button class="btn-main" onclick="luuKetQua()">Lưu kết quả</button>
-<button class="btn-gray" onclick="doMoi()">Đo mới</button>
+<button class="btn-gray" onclick="doMoi()">New Measurement</button>
 </div>
 <div class="flex">
 <button class="btn-main" onclick="chonAnh()">Chụp hình</button>
@@ -101,7 +105,7 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 <input id="anhInput" type="file" accept="image/*" capture="environment" multiple onchange="taiAnhLen(event,'camera')" style="display:none">
 <input id="thuVienInput" type="file" accept="image/*" multiple onchange="taiAnhLen(event,'gallery')" style="display:none">
 <div id="anhPreviewWrap" class="preview-wrap"></div>
-<button class="btn-main" onclick="xuatAnh()">Xuất ảnh</button>
+<button class="btn-main" onclick="xuatAnh()">Export Picture</button>
 </div>
 
 <div class="card">
@@ -137,8 +141,7 @@ button{padding:10px;font-size:14px;border:none;border-radius:8px;color:#fff;marg
 </table>
 </div>
 
-<button class="btn-main" onclick="xuatExcel()">Xuất Excel</button>
-<button class="btn-main" onclick="xuatExcelKemHinh()">Xuất Excel kèm hình</button>
+<button class="btn-main" onclick="xuatExcelKemHinh()">Export Excel</button>
 
 </div>
 
@@ -356,12 +359,10 @@ dsHinh.forEach((h,idx)=>{
 }
 
 function doMoi(){
-if(confirm('Xóa toàn bộ dữ liệu?')){
-localStorage.removeItem('k');
-document.querySelectorAll('input').forEach(i=>i.value='');
+if(confirm('Tạo phép đo mới?')){
+['m1','m2','m3','m5','m6'].forEach(id=>document.getElementById(id).value='');
 document.querySelectorAll('#m4,#m7,#m8,#m9,#kq,#dg').forEach(e=>e.innerText='');
 xoaAnhTam();
-hienthi();
 }
 }
 
@@ -471,6 +472,51 @@ if(!m) return 'jpeg';
 let ext = m[1].toLowerCase();
 if(ext==='jpg') return 'jpeg';
 return ext;
+}
+
+function layThongTinCongTrinh(){
+let raw = localStorage.getItem('thong_tin_cong_trinh');
+if(!raw){
+  alert('Chưa có thông tin công trình đã lưu');
+  return;
+}
+let d = JSON.parse(raw);
+document.getElementById('congtrinh').value=d.congtrinh||'';
+document.getElementById('donvi').value=d.donvi||'';
+document.getElementById('tvgs').value=d.tvgs||'';
+document.getElementById('ten').value=d.ten||'';
+document.getElementById('vitri').value=d.vitri||'';
+document.getElementById('gammaMax').value=d.gammaMax||'';
+document.getElementById('kYC').value=d.kYC||'';
+hienthi();
+}
+
+function xuatThongTinCongTrinhTxt(){
+let d = {
+  congtrinh: document.getElementById('congtrinh').value,
+  donvi: document.getElementById('donvi').value,
+  tvgs: document.getElementById('tvgs').value,
+  ten: document.getElementById('ten').value,
+  vitri: document.getElementById('vitri').value,
+  gammaMax: document.getElementById('gammaMax').value,
+  kYC: document.getElementById('kYC').value
+};
+localStorage.setItem('thong_tin_cong_trinh',JSON.stringify(d));
+let txt = `THONG TIN CONG TRINH\n`+
+`Ten cong trinh: ${d.congtrinh}\n`+
+`Don vi thi cong: ${d.donvi}\n`+
+`TVGS: ${d.tvgs}\n`+
+`Ten duong: ${d.ten}\n`+
+`Vi tri: ${d.vitri}\n`+
+`Gamma max: ${d.gammaMax}\n`+
+`K yeu cau: ${d.kYC}\n`;
+
+let blob = new Blob([txt],{type:'text/plain;charset=utf-8'});
+let link = document.createElement('a');
+link.href = URL.createObjectURL(blob);
+link.download = 'thong_tin_cong_trinh.txt';
+link.click();
+setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
 
 function esc(v){
